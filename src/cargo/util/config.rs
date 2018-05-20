@@ -28,6 +28,7 @@ use core::{CliUnstable, Shell, SourceId, Workspace};
 use ops;
 use url::Url;
 use util::errors::{internal, CargoResult, CargoResultExt};
+use util::important_paths::find_root_manifest_for_wd;
 use util::paths;
 use util::toml as cargo_toml;
 use util::Filesystem;
@@ -290,6 +291,25 @@ impl Config {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR_PREFIX") {
+            let prefix = Path::new(&dir);
+            if !prefix.is_absolute() {
+                bail!("CARGO_TARGET_DIR_PREFIX must describe an absolute path");
+            }
+            // We need to take into consideration that `self.cwd` may
+            // point to a directory other than the one containing
+            // Cargo.toml. We definitely want to stay relative to the
+            // latter.
+            let mut cwd = find_root_manifest_for_wd(&self.cwd)?;
+            let result = cwd.pop();
+            assert!(result);
+
+            match cwd.strip_prefix("/") {
+                Ok(cwd) => Ok(Some(Filesystem::new(prefix.join(&cwd).join("target")))),
+                // FIXME: This logic is probably not safe on Windows. Not sure how
+                //        to make a path relative there.
+                Err(_) => bail!("Current directory must be an absolute path"),
+            }
         } else if let Some(val) = self.get_path("build.target-dir")? {
             let val = self.cwd.join(val.val);
             Ok(Some(Filesystem::new(val)))

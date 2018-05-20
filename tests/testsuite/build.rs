@@ -3033,6 +3033,64 @@ fn dotdir_root() {
 }
 
 #[test]
+fn custom_target_dir_prefix() {
+    let tmpdir = tempfile::Builder::new()
+        .tempdir()
+        .unwrap()
+        .path()
+        .to_path_buf();
+
+    let p = project("foo")
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let root = p.root();
+    let root_suffix = root.strip_prefix("/").unwrap();
+    let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
+
+    assert_that(
+        p.cargo("build")
+            .env("CARGO_TARGET_DIR_PREFIX", tmpdir.clone()),
+        execs().with_status(0),
+    );
+    assert_that(
+        tmpdir
+            .clone()
+            .join(root_suffix)
+            .join("target/debug")
+            .join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        is_not(existing_file()),
+    );
+
+    assert_that(p.cargo("build"), execs().with_status(0));
+    assert_that(
+        tmpdir
+            .clone()
+            .join(root_suffix)
+            .join("target/debug")
+            .join(&exe_name),
+        existing_file(),
+    );
+    assert_that(
+        &p.root().join("target/debug").join(&exe_name),
+        existing_file(),
+    );
+}
+
+#[test]
 fn custom_target_dir_env() {
     let p = project()
         .file("src/main.rs", "fn main() {}")

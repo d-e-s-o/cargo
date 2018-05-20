@@ -13,8 +13,13 @@ system:
   checkouts of crates.  By default these are stored under `$HOME/.cargo`, but
   this variable overrides the location of this directory. Once a crate is cached
   it is not removed by the clean command.
+* `CARGO_TARGET_DIR_PREFIX` — Prefix to the location where to place all
+  generated artifacts. The current working directory will be appended to this
+  prefix to form the final path for generated artifacts. Note that
+  `CARGO_TARGET_DIR`, if set, takes precedence over this variable.
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
-  relative to the current working directory.
+  relative to the current working directory. This variable supersedes the
+  behavior of `CARGO_TARGET_DIR_PREFIX`.
 * `RUSTC` — Instead of running `rustc`, Cargo will execute this specified
   compiler instead.
 * `RUSTC_WRAPPER` — Instead of simply running `rustc`, Cargo will execute this
@@ -32,7 +37,7 @@ system:
   compilation to be enabled for the current compilation, and when set to 0 it
   will force disabling it. If this env var isn't present then cargo's defaults
   will otherwise be used.
-* `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache 
+* `CARGO_CACHE_RUSTC_INFO` — If this is set to 0 then Cargo will not try to cache
   compiler version information.
 
 Note that Cargo will also read environment variables for `.cargo/config`

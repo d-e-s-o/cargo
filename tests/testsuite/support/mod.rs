@@ -1692,6 +1692,7 @@ fn _process(t: &OsStr) -> cargo::util::ProcessBuilder {
         .env_remove("GIT_AUTHOR_EMAIL")
         .env_remove("GIT_COMMITTER_NAME")
         .env_remove("GIT_COMMITTER_EMAIL")
+        .env_remove("CARGO_TARGET_DIR_PREFIX") // we assume no prefix
         .env_remove("CARGO_TARGET_DIR") // we assume 'target'
         .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
     p

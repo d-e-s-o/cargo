@@ -138,8 +138,6 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let target_dir = config.target_dir()?;
-
         let mut ws = Workspace {
             config,
             current_manifest: manifest_path.to_path_buf(),
@@ -148,7 +146,7 @@ impl<'cfg> Workspace<'cfg> {
                 packages: HashMap::new(),
             },
             root_manifest: None,
-            target_dir,
+            target_dir: None,
             members: Vec::new(),
             member_ids: HashSet::new(),
             default_members: Vec::new(),
@@ -158,6 +156,11 @@ impl<'cfg> Workspace<'cfg> {
             ignore_lock: false,
         };
         ws.root_manifest = ws.find_root(manifest_path)?;
+        if let Some(ref root_manifest) = ws.root_manifest {
+            ws.target_dir = config.target_dir(root_manifest)?;
+        } else {
+            ws.target_dir = config.target_dir(manifest_path)?;
+        }
         ws.find_members()?;
         ws.validate()?;
         Ok(ws)
@@ -198,13 +201,13 @@ impl<'cfg> Workspace<'cfg> {
         {
             let key = ws.current_manifest.parent().unwrap();
             let id = package.package_id();
-            let package = MaybePackage::Package(package);
-            ws.packages.packages.insert(key.to_path_buf(), package);
             ws.target_dir = if let Some(dir) = target_dir {
                 Some(dir)
             } else {
-                ws.config.target_dir()?
+                ws.config.target_dir(package.manifest_path())?
             };
+            let package = MaybePackage::Package(package);
+            ws.packages.packages.insert(key.to_path_buf(), package);
             ws.members.push(ws.current_manifest.clone());
             ws.member_ids.insert(id);
             ws.default_members.push(ws.current_manifest.clone());

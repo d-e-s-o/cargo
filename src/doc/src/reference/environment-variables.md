@@ -15,6 +15,10 @@ system:
   location of this directory. Once a crate is cached it is not removed by the
   clean command.
   For more details refer to the [guide](../guide/cargo-home.md).
+* `CARGO_TARGET_DIR_PREFIX` — Prefix to the location where to place all
+  generated artifacts. The current working directory will be appended to this
+  prefix to form the final path for generated artifacts. Note that
+  `CARGO_TARGET_DIR`, if set, takes precedence over this variable.
 * `CARGO_TARGET_DIR` — Location of where to place all generated artifacts,
   relative to the current working directory. See [`build.target-dir`] to set
   via config.

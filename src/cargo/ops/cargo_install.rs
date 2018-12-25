@@ -263,6 +263,7 @@ fn install_one(
         }
     };
 
+    let manifest_path = pkg.manifest_path().to_path_buf();
     let (mut ws, rustc, target) = make_ws_rustc_target(config, opts, &source_id, pkg.clone())?;
     let pkg = if source_id.is_git() {
         // Don't use ws.current() in order to keep the package source as a git source so that
@@ -275,7 +276,7 @@ fn install_one(
     let mut td_opt = None;
     let mut needs_cleanup = false;
     if !source_id.is_path() {
-        let target_dir = if let Some(dir) = config.target_dir()? {
+        let target_dir = if let Some(dir) = config.target_dir(manifest_path)? {
             dir
         } else if let Ok(td) = TempFileBuilder::new().prefix("cargo-install").tempdir() {
             let p = td.path().to_owned();

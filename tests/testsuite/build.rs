@@ -3020,6 +3020,63 @@ fn explicit_color_config_is_propagated_to_rustc() {
 }
 
 #[cargo_test]
+fn custom_target_dir_prefix() {
+    fn test(cwd: &str) {
+        let tmpdir = tempfile::Builder::new()
+            .tempdir()
+            .unwrap()
+            .path()
+            .to_path_buf();
+
+        let p = project()
+            .file(
+                "Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+            "#,
+            )
+            .file("src/main.rs", "fn main() {}")
+            .build();
+
+        let root = p.root();
+        let root_suffix = root.strip_prefix("/").unwrap();
+        let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
+
+        p.cargo("build")
+            .env("CARGO_TARGET_DIR_PREFIX", tmpdir.clone())
+            .cwd(p.root().join(cwd))
+            .run();
+
+        assert!(
+            tmpdir
+                .clone()
+                .join(root_suffix)
+                .join("target/debug")
+                .join(&exe_name)
+                .is_file()
+        );
+        assert!(!&p.root().join("target/debug").join(&exe_name).is_file());
+
+        p.cargo("build").run();
+        assert!(
+            tmpdir
+                .clone()
+                .join(root_suffix)
+                .join("target/debug")
+                .join(&exe_name)
+                .is_file()
+        );
+        assert!(&p.root().join("target/debug").join(&exe_name).is_file())
+    };
+
+    test(".");
+    test("src");
+}
+
+#[cargo_test]
 fn compiler_json_error_format() {
     let p = project()
         .file(

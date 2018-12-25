@@ -315,11 +315,26 @@ impl Config {
         &self.cwd
     }
 
-    pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
+    pub fn target_dir(&self, manifest: impl Into<PathBuf>) -> CargoResult<Option<Filesystem>> {
         if let Some(ref dir) = self.target_dir {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR") {
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR_PREFIX") {
+            let prefix = Path::new(&dir);
+            if !prefix.is_absolute() {
+                failure::bail!("CARGO_TARGET_DIR_PREFIX must describe an absolute path");
+            }
+            let mut manifest = manifest.into();
+            let result = manifest.pop();
+            assert!(result);
+
+            match manifest.strip_prefix("/") {
+                Ok(dir) => Ok(Some(Filesystem::new(prefix.join(&dir).join("target")))),
+                // FIXME: This logic is probably not safe on Windows. Not sure how
+                //        to make a path relative there.
+                Err(_) => failure::bail!("Current directory must be an absolute path"),
+            }
         } else if let Some(val) = self.get_path("build.target-dir")? {
             let val = self.cwd.join(val.val);
             Ok(Some(Filesystem::new(val)))

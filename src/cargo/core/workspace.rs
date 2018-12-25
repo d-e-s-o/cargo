@@ -138,7 +138,7 @@ impl<'cfg> Workspace<'cfg> {
     /// root and all member packages. It will then validate the workspace
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
-        let target_dir = config.target_dir()?;
+        let target_dir = config.target_dir(manifest_path)?;
 
         let mut ws = Workspace {
             config,
@@ -198,13 +198,13 @@ impl<'cfg> Workspace<'cfg> {
         {
             let key = ws.current_manifest.parent().unwrap();
             let id = package.package_id();
-            let package = MaybePackage::Package(package);
-            ws.packages.packages.insert(key.to_path_buf(), package);
             ws.target_dir = if let Some(dir) = target_dir {
                 Some(dir)
             } else {
-                ws.config.target_dir()?
+                ws.config.target_dir(package.manifest_path())?
             };
+            let package = MaybePackage::Package(package);
+            ws.packages.packages.insert(key.to_path_buf(), package);
             ws.members.push(ws.current_manifest.clone());
             ws.member_ids.insert(id);
             ws.default_members.push(ws.current_manifest.clone());

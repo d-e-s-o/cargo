@@ -485,7 +485,7 @@ impl Config {
     /// Returns `None` if the user has not chosen an explicit directory.
     ///
     /// Callers should prefer `Workspace::target_dir` instead.
-    pub fn target_dir(&self) -> CargoResult<Option<Filesystem>> {
+    pub fn target_dir(&self, manifest: impl Into<PathBuf>) -> CargoResult<Option<Filesystem>> {
         if let Some(dir) = &self.target_dir {
             Ok(Some(dir.clone()))
         } else if let Some(dir) = self.env.get("CARGO_TARGET_DIR") {
@@ -498,6 +498,21 @@ impl Config {
             }
 
             Ok(Some(Filesystem::new(self.cwd.join(dir))))
+        } else if let Some(dir) = env::var_os("CARGO_TARGET_DIR_PREFIX") {
+            let prefix = Path::new(&dir);
+            if !prefix.is_absolute() {
+                bail!("CARGO_TARGET_DIR_PREFIX must describe an absolute path");
+            }
+            let mut manifest = manifest.into();
+            let result = manifest.pop();
+            assert!(result);
+
+            match manifest.strip_prefix("/") {
+                Ok(dir) => Ok(Some(Filesystem::new(prefix.join(&dir).join("target")))),
+                // FIXME: This logic is probably not safe on Windows. Not sure how
+                //        to make a path relative there.
+                Err(_) => bail!("Current directory must be an absolute path"),
+            }
         } else if let Some(val) = &self.build_config()?.target_dir {
             let path = val.resolve_path(self);
 

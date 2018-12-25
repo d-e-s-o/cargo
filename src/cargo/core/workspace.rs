@@ -139,8 +139,12 @@ impl<'cfg> Workspace<'cfg> {
     /// before returning it, so `Ok` is only returned for valid workspaces.
     pub fn new(manifest_path: &Path, config: &'cfg Config) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace::new_default(manifest_path.to_path_buf(), config);
-        ws.target_dir = config.target_dir()?;
         ws.root_manifest = ws.find_root(manifest_path)?;
+        if let Some(ref root_manifest) = ws.root_manifest {
+            ws.target_dir = config.target_dir(root_manifest)?;
+        } else {
+            ws.target_dir = config.target_dir(manifest_path)?;
+        }
         ws.find_members()?;
         ws.validate()?;
         Ok(ws)
@@ -174,7 +178,11 @@ impl<'cfg> Workspace<'cfg> {
     ) -> CargoResult<Workspace<'cfg>> {
         let mut ws = Workspace::new_default(current_manifest, config);
         ws.root_manifest = Some(root_path.join("Cargo.toml"));
-        ws.target_dir = config.target_dir()?;
+        if let Some(ref root_manifest) = ws.root_manifest {
+            ws.target_dir = config.target_dir(root_manifest)?;
+        } else {
+            ws.target_dir = config.target_dir(&ws.current_manifest)?;
+        }
         ws.packages
             .packages
             .insert(root_path, MaybePackage::Virtual(manifest));
@@ -204,13 +212,13 @@ impl<'cfg> Workspace<'cfg> {
         ws.require_optional_deps = require_optional_deps;
         let key = ws.current_manifest.parent().unwrap();
         let id = package.package_id();
-        let package = MaybePackage::Package(package);
-        ws.packages.packages.insert(key.to_path_buf(), package);
         ws.target_dir = if let Some(dir) = target_dir {
             Some(dir)
         } else {
-            ws.config.target_dir()?
+            ws.config.target_dir(package.manifest_path())?
         };
+        let package = MaybePackage::Package(package);
+        ws.packages.packages.insert(key.to_path_buf(), package);
         ws.members.push(ws.current_manifest.clone());
         ws.member_ids.insert(id);
         ws.default_members.push(ws.current_manifest.clone());

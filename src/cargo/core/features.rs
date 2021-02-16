@@ -210,7 +210,7 @@ features! {
         [unstable] named_profiles: bool,
 
         // Opt-in new-resolver behavior.
-        [unstable] resolver: bool,
+        [stable] resolver: bool,
 
         // Allow to specify whether binaries should be stripped.
         [unstable] strip: bool,
